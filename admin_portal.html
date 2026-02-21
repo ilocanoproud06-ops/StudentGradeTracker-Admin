@@ -14,76 +14,197 @@
     />
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
-    <!-- Firebase SDK -->
+    <!-- Firebase SDK (Optional - for cloud sync) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-    <script>
-      // Your web app's Firebase configuration
-      const firebaseConfig = {
-        apiKey: "AIzaSyC3T9M61Ryll8scTGVWH5QdZKuAguWTzgw",
-        authDomain: "studentgradetracker-e04c0.firebaseapp.com",
-        projectId: "studentgradetracker-e04c0",
-        storageBucket: "studentgradetracker-e04c0.firebasestorage.app",
-        messagingSenderId: "886408200590",
-        appId: "1:886408200590:web:c9fbdb028e5dcd442c64df",
-      };
+    <!-- Local Storage Sync Manager (works offline) -->
+    <script src="firebase-config.js"></script>
+    <style>
+      /* Mobile responsive styles */
+      @media (max-width: 767.98px) {
+        #sidebar {
+          transform: translateX(-100%);
+          width: 100% !important;
+          max-width: 280px;
+          height: 100vh;
+        }
 
-      // Initialize Firebase
-      const app = firebase.initializeApp(firebaseConfig);
-      const db = firebase.firestore();
-      const auth = firebase.auth();
+        #sidebar.show {
+          transform: translateX(0);
+        }
+
+        #mainContent {
+          margin-left: 0 !important;
+        }
+
+        .col-md-10 {
+          width: 100% !important;
+          flex: 0 0 100% !important;
+          max-width: 100% !important;
+        }
+
+        /* Overlay when sidebar is open on mobile */
+        .sidebar-overlay {
+          display: none;
+          position: fixed;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background: rgba(0, 0, 0, 0.5);
+          z-index: 999;
+        }
+
+        .sidebar-overlay.show {
+          display: block;
+        }
+
+        /* Adjust table overflow for mobile */
+        .table-responsive {
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+
+        /* Make cards full width on mobile */
+        .card {
+          margin-bottom: 1rem;
+        }
+      }
+
+      @media (min-width: 768px) {
+        #sidebar {
+          position: sticky !important;
+          transform: none !important;
+        }
+      }
+    </style>
+    <script>
+      // Storage mode - default to localStorage for offline use
+      // Set to true only if you want cloud sync with Firebase
+      window.FORCE_LOCAL_ONLY = true; // Always use localStorage first (works offline)
     </script>
   </head>
   <body>
-    <div class="d-flex" id="mainContent">
-      <div class="bg-dark col-md-2 p-3" style="min-height: 100vh">
+    <!-- Mobile Header with Hamburger Menu -->
+    <nav class="navbar navbar-dark bg-dark d-md-none p-3">
+      <div class="container-fluid p-0">
+        <span class="navbar-brand mb-0 h5">
+          <i class="fas fa-graduation-cap me-2"></i>AcademicPro
+        </span>
+        <button
+          class="navbar-toggler"
+          type="button"
+          id="sidebarToggle"
+          onclick="toggleSidebar()"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+      </div>
+    </nav>
+
+    <div class="d-flex" id="mainContent" style="display: flex !important">
+      <!-- Sidebar -->
+      <div
+        class="bg-dark col-md-2 p-3"
+        id="sidebar"
+        style="
+          min-height: 100vh;
+          position: fixed;
+          z-index: 1000;
+          width: inherit;
+          transition: transform 0.3s ease-in-out;
+        "
+      >
         <h5 class="text-white mb-4">
           <i class="fas fa-graduation-cap me-2"></i>AcademicPro
         </h5>
+        <!-- Storage Mode Indicator -->
+        <div class="mb-3 px-2">
+          <div id="storageModeIndicator" class="badge bg-info w-100 py-2">
+            <i class="fas fa-save me-1"></i>
+            <span data-storage-mode>Local Mode</span>
+          </div>
+        </div>
         <ul class="nav flex-column">
           <li class="nav-item">
-            <a class="nav-link active" href="#" data-section="dashboard"
+            <a
+              class="nav-link active"
+              href="javascript:void(0)"
+              data-section="dashboard"
+              onclick="showSection('dashboard')"
               ><i class="fas fa-chart-line me-2"></i>Dashboard</a
             >
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#" data-section="courses"
+            <a
+              class="nav-link"
+              href="javascript:void(0)"
+              data-section="courses"
+              onclick="showSection('courses')"
               ><i class="fas fa-book me-2"></i>Courses</a
             >
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#" data-section="students"
+            <a
+              class="nav-link"
+              href="javascript:void(0)"
+              data-section="students"
+              onclick="showSection('students')"
               ><i class="fas fa-users me-2"></i>Students</a
             >
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#" data-section="enrollment"
+            <a
+              class="nav-link"
+              href="javascript:void(0)"
+              data-section="enrollment"
+              onclick="showSection('enrollment')"
               ><i class="fas fa-user-plus me-2"></i>Enrollment</a
             >
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#" data-section="grades"
+            <a
+              class="nav-link"
+              href="javascript:void(0)"
+              data-section="grades"
+              onclick="showSection('grades')"
               ><i class="fas fa-clipboard-list me-2"></i>Grade Entry</a
             >
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#" data-section="grading"
+            <a
+              class="nav-link"
+              href="javascript:void(0)"
+              data-section="grading"
+              onclick="showSection('grading')"
               ><i class="fas fa-scale-balanced me-2"></i>Grading Scale</a
             >
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#" data-section="assessment"
-              ><i class="fas fa-clipboard-check me-2"></i>Assessment Entry</a
-            >
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" href="#" data-section="assessmentHps"
+            <a
+              class="nav-link"
+              href="javascript:void(0)"
+              data-section="assessmentHps"
+              onclick="showSection('assessmentHps')"
               ><i class="fas fa-calculator me-2"></i>Assessment & HPS</a
             >
           </li>
           <li class="nav-item">
-            <a class="nav-link" href="#" data-section="groups"
+            <a
+              class="nav-link"
+              href="javascript:void(0)"
+              data-section="trash"
+              onclick="showSection('trash')"
+              ><i class="fas fa-trash me-2"></i>Trash</a
+            >
+          </li>
+          <li class="nav-item">
+            <a
+              class="nav-link"
+              href="javascript:void(0)"
+              data-section="groups"
+              onclick="showSection('groups')"
               ><i class="fas fa-users me-2"></i>Group Management</a
             >
           </li>
@@ -94,6 +215,62 @@
           onclick="window.location.href = 'welcome_admin.html'"
           ><i class="fas fa-sign-out-alt me-2"></i>Logout</a
         >
+
+        <!-- Data Management Section -->
+        <div class="mt-4 px-2">
+          <hr class="border-secondary" />
+          <p class="text-muted small mb-2">
+            <i class="fas fa-database me-1"></i> Data Management
+          </p>
+          <!-- Export Status Indicator -->
+          <div id="exportStatusIndicator" class="mb-2">
+            <div data-needs-export class="badge bg-success">
+              <i class="fas fa-check me-1"></i> Up to Date
+            </div>
+          </div>
+          <!-- Export Notification (hidden by default) -->
+          <div
+            id="exportNotification"
+            class="alert alert-success py-1 px-2 mb-2 small d-none"
+          >
+            <i class="fas fa-check-circle me-1"></i> Data saved!
+          </div>
+          <button
+            class="btn btn-sm btn-outline-light w-100 mb-2"
+            onclick="exportData()"
+          >
+            <i class="fas fa-download me-1"></i> Export Backup
+          </button>
+          <button
+            class="btn btn-sm btn-outline-warning w-100 mb-2"
+            onclick="exportSharedData()"
+          >
+            <i class="fas fa-share-alt me-1"></i> Export Shared Data
+          </button>
+          <small class="text-muted d-block mb-2"
+            >For students to view grades</small
+          >
+          <input
+            type="file"
+            id="importFile"
+            accept=".json"
+            style="display: none"
+            onchange="importData(this)"
+          />
+          <button
+            class="btn btn-sm btn-outline-light w-100"
+            onclick="document.getElementById('importFile').click()"
+          >
+            <i class="fas fa-upload me-1"></i> Import Backup
+          </button>
+          <!-- Show URLs Button -->
+          <button
+            class="btn btn-sm btn-success w-100 mt-2"
+            onclick="showUrlModal()"
+          >
+            <i class="fas fa-link me-1"></i> Show Access URLs
+          </button>
+        </div>
       </div>
 
       <div class="col-md-10 p-4">
@@ -692,87 +869,6 @@
           </div>
         </div>
 
-        <!-- Assessment Entry Section -->
-        <div id="assessmentSection" class="section d-none">
-          <h4 class="fw-bold mb-4">Assessment Entry</h4>
-          <div class="row">
-            <div class="col-md-5">
-              <div class="card">
-                <div class="card-header">
-                  <h5 class="mb-0">Add New Assessment</h5>
-                </div>
-                <div class="card-body">
-                  <form id="assessmentForm">
-                    <div class="mb-3">
-                      <label class="form-label">Assessment Type</label>
-                      <select class="form-select" id="assessmentType" required>
-                        <option value="">Select Type</option>
-                        <option value="written">Written Exam</option>
-                        <option value="quiz">Quiz</option>
-                        <option value="pt">Performance Task</option>
-                        <option value="project">Project</option>
-                      </select>
-                    </div>
-                    <div class="mb-3">
-                      <label class="form-label">Assessment Title</label>
-                      <input
-                        type="text"
-                        class="form-control"
-                        id="assessmentTitle"
-                        placeholder="e.g., Quiz 1, Midterm Exam, PT 1"
-                        required
-                      />
-                    </div>
-                    <div class="mb-3">
-                      <label class="form-label">Date Taken</label>
-                      <input
-                        type="date"
-                        class="form-control"
-                        id="assessmentDate"
-                        required
-                      />
-                    </div>
-                    <div class="mb-3">
-                      <label class="form-label">Course</label>
-                      <select
-                        class="form-select"
-                        id="assessmentCourse"
-                        required
-                      >
-                        <option value="">Select Course</option>
-                      </select>
-                    </div>
-                    <button type="submit" class="btn btn-primary w-100">
-                      Add Assessment
-                    </button>
-                  </form>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-7">
-              <div class="card">
-                <div class="card-header">
-                  <h5 class="mb-0">Assessment List</h5>
-                </div>
-                <div class="card-body">
-                  <table class="table table-sm" id="assessmentTable">
-                    <thead>
-                      <tr>
-                        <th>Type</th>
-                        <th>Title</th>
-                        <th>Course</th>
-                        <th>Date</th>
-                        <th></th>
-                      </tr>
-                    </thead>
-                    <tbody></tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
         <!-- Combined Assessment & HPS Entry Section -->
         <div id="assessmentHpsSection" class="section d-none">
           <h4 class="fw-bold mb-4">Assessment & HPS Entry</h4>
@@ -867,6 +963,52 @@
                 >
                   <i class="fas fa-plus me-1"></i> Add Assessment Row
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Trash Section for Deleted Assessments -->
+        <div id="trashSection" class="section d-none">
+          <h4 class="fw-bold mb-4"><i class="fas fa-trash me-2"></i>Trash</h4>
+          <div class="card">
+            <div
+              class="card-header d-flex justify-content-between align-items-center"
+            >
+              <h5 class="mb-0">Deleted Assessments</h5>
+              <button
+                class="btn btn-sm btn-danger"
+                onclick="emptyTrashAssessments()"
+              >
+                <i class="fas fa-trash-alt me-1"></i> Empty Trash
+              </button>
+            </div>
+            <div class="card-body">
+              <div
+                id="deletedAssessmentsEmpty"
+                class="text-center py-5 text-muted"
+              >
+                <p>
+                  <i class="fas fa-trash fa-3x mb-3"></i><br />Trash is empty
+                </p>
+              </div>
+              <div class="table-responsive">
+                <table
+                  class="table table-hover d-none"
+                  id="deletedAssessmentsTable"
+                >
+                  <thead class="table-light">
+                    <tr>
+                      <th>Type</th>
+                      <th>Title</th>
+                      <th>Course</th>
+                      <th>Date</th>
+                      <th>Deleted</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="deletedAssessmentsTableBody"></tbody>
+                </table>
               </div>
             </div>
           </div>
@@ -1177,6 +1319,69 @@
       // Additional protection: Clear console on load
       console.clear();
 
+      // Sidebar toggle function for mobile
+      function toggleSidebar() {
+        var sidebar = document.getElementById("sidebar");
+        var mainContent = document.getElementById("mainContent");
+
+        // Check if overlay already exists
+        var existingOverlay = document.querySelector(".sidebar-overlay");
+
+        if (sidebar.classList.contains("show")) {
+          sidebar.classList.remove("show");
+          if (existingOverlay) {
+            existingOverlay.remove();
+          }
+        } else {
+          sidebar.classList.add("show");
+
+          // Create overlay if it doesn't exist
+          if (!existingOverlay) {
+            var overlay = document.createElement("div");
+            overlay.className = "sidebar-overlay show";
+            overlay.onclick = function () {
+              sidebar.classList.remove("show");
+              this.remove();
+            };
+            document.body.appendChild(overlay);
+          } else {
+            existingOverlay.classList.add("show");
+          }
+        }
+      }
+
+      // Close sidebar when clicking a nav link on mobile
+      function closeSidebarOnMobile() {
+        if (window.innerWidth < 768) {
+          var sidebar = document.getElementById("sidebar");
+          var overlay = document.querySelector(".sidebar-overlay");
+          sidebar.classList.remove("show");
+          if (overlay) {
+            overlay.remove();
+          }
+        }
+      }
+
+      // Add event listeners to nav links to close sidebar on mobile
+      document.addEventListener("DOMContentLoaded", function () {
+        var navLinks = document.querySelectorAll(".nav-link");
+        navLinks.forEach(function (link) {
+          link.addEventListener("click", closeSidebarOnMobile);
+        });
+      });
+
+      // Handle window resize
+      window.addEventListener("resize", function () {
+        if (window.innerWidth >= 768) {
+          var sidebar = document.getElementById("sidebar");
+          var overlay = document.querySelector(".sidebar-overlay");
+          sidebar.classList.remove("show");
+          if (overlay) {
+            overlay.remove();
+          }
+        }
+      });
+
       const DB_KEY = "academic_grade_system_v1";
       let store = JSON.parse(localStorage.getItem(DB_KEY)) || {
         courses: [],
@@ -1184,6 +1389,7 @@
         enrollments: [],
         grades: {},
         assessments: [],
+        deletedAssessments: [], // Trash for deleted assessments
         groups: [],
         hps: { quiz: 50, pt: 100, project: 100, exam: 100 },
         weights: { written: 40, quiz: 20, pt: 30, project: 10 },
@@ -1201,23 +1407,126 @@
         ],
       };
 
+      // Ensure deletedAssessments array exists (for backwards compatibility)
+      if (!store.deletedAssessments) {
+        store.deletedAssessments = [];
+        localStorage.setItem(DB_KEY, JSON.stringify(store));
+      }
+
       // Ensure assessments array exists (for backwards compatibility)
       if (!store.assessments) {
         store.assessments = [];
         localStorage.setItem(DB_KEY, JSON.stringify(store));
       }
 
+      // ============================================
+      // Helper Functions for Assessment & HPS Integration
+      // ============================================
+
+      // Get assessment data for a specific course and type from Assessment & HPS section
+      function getAssessmentDataForCourse(courseId, type) {
+        if (!courseId || !type) {
+          return { assessments: [], hps: {} };
+        }
+
+        var courseKey = "course_" + courseId;
+
+        // Get assessments from store.assessments
+        var assessments = store.assessments.filter(function (a) {
+          return a.courseId === courseId && a.type === type;
+        });
+
+        // Get HPS from store.hps.perAssessment
+        var hpsData = {};
+        if (
+          store.hps &&
+          store.hps.perAssessment &&
+          store.hps.perAssessment[courseKey]
+        ) {
+          hpsData = store.hps.perAssessment[courseKey][type] || {};
+        }
+
+        // Map assessments to include their HPS values
+        var assessmentsWithHps = assessments.map(function (a) {
+          var hpsKey = a.subType || "a" + a.id;
+          return {
+            id: a.id,
+            subType: a.subType,
+            title: a.title,
+            month: a.month,
+            date: a.date,
+            hps: hpsData[hpsKey] || (type === "quiz" ? 50 : 100),
+          };
+        });
+
+        return { assessments: assessmentsWithHps, hps: hpsData };
+      }
+
+      // Get HPS value for a specific assessment
+      function getHpsForAssessment(courseId, type, subType) {
+        if (!courseId) return type === "quiz" ? 50 : 100;
+
+        var courseKey = "course_" + courseId;
+        if (
+          store.hps &&
+          store.hps.perAssessment &&
+          store.hps.perAssessment[courseKey]
+        ) {
+          var typeHps = store.hps.perAssessment[courseKey][type] || {};
+          return typeHps[subType] || (type === "quiz" ? 50 : 100);
+        }
+        return type === "quiz" ? 50 : 100;
+      }
+
+      // Get assessment count based on type
+      function getAssessmentCount(courseId, type) {
+        var data = getAssessmentDataForCourse(courseId, type);
+        if (data.assessments && data.assessments.length > 0) {
+          return data.assessments.length;
+        }
+        // Default counts based on type
+        if (type === "quiz") return 4;
+        if (type === "pt") return 4;
+        if (type === "project") return 2;
+        if (type === "written") return 4;
+        return 4;
+      }
+
       document.addEventListener("DOMContentLoaded", function () {
         // Show main content directly (authentication handled by admin_login.html)
         document.getElementById("mainContent").style.display = "flex";
-        initApp();
 
-        document.querySelectorAll(".nav-link").forEach((l) =>
-          l.addEventListener("click", function (e) {
+        // Use event delegation for navigation links (more reliable)
+        document.addEventListener("click", function (e) {
+          // Check if clicked element is a nav-link
+          const navLink = e.target.closest(".nav-link");
+          if (navLink && navLink.dataset.section) {
             e.preventDefault();
-            showSection(this.dataset.section);
-          }),
-        );
+            showSection(navLink.dataset.section);
+          }
+        });
+
+        // Wait for SyncManager to be ready before initializing the app
+        // This ensures firebase-config.js has finished loading
+        if (window.waitForSyncManager) {
+          window
+            .waitForSyncManager()
+            .then(function () {
+              console.log("SyncManager ready, initializing app...");
+              initApp();
+            })
+            .catch(function (err) {
+              console.error("Error waiting for SyncManager:", err);
+              initApp(); // Still try to initialize even if there's an error
+            });
+        } else {
+          // Fallback if waitForSyncManager is not available
+          console.log(
+            "waitForSyncManager not found, initializing app directly...",
+          );
+          initApp();
+        }
+
         document
           .getElementById("courseForm")
           .addEventListener("submit", function (e) {
@@ -1245,24 +1554,39 @@
       });
 
       function initApp() {
-        renderDashboard();
-        renderCourses();
-        renderStudents();
-        renderEnrollment();
-        renderGradingScale();
+        // Use SyncManager for data loading - works offline
+        // SyncManager will use localStorage first, optionally sync with Firebase if enabled
+        SyncManager.loadData()
+          .then(function (storeData) {
+            store = storeData;
+            console.log("Data loaded, students count:", store.students.length);
 
-        // Populate dashboard grade summary
-        populateDashboardGradeFilter();
-        renderDashboardGradeSummary();
+            // Continue with app initialization
+            renderDashboard();
+            renderCourses();
+            renderStudents();
+            renderEnrollment();
+            renderGradingScale();
 
-        // Initialize default HPS values in store if not present
-        if (!store.hps) {
-          store.hps = { quiz: 50, pt: 100, project: 100, exam: 100 };
-        }
-        if (!store.hps.perAssessment) {
-          store.hps.perAssessment = {};
-        }
-        save();
+            // Populate dashboard grade summary
+            populateDashboardGradeFilter();
+            renderDashboardGradeSummary();
+
+            // Initialize default HPS values in store if not present
+            if (!store.hps) {
+              store.hps = { quiz: 50, pt: 100, project: 100, exam: 100 };
+            }
+            if (!store.hps.perAssessment) {
+              store.hps.perAssessment = {};
+            }
+            save();
+          })
+          .catch(function (error) {
+            console.error("Error loading data:", error);
+            // Use default store on error
+            store = SyncManager.ensureDefaultStructure(null);
+            save();
+          });
       }
 
       function showSection(id) {
@@ -1277,16 +1601,23 @@
           }
         }
 
-        document
-          .querySelectorAll(".section")
-          .forEach((s) => s.classList.add("d-none"));
+        var sections = document.querySelectorAll(".section");
+        for (var i = 0; i < sections.length; i++) {
+          sections[i].classList.add("d-none");
+          sections[i].style.display = "none";
+        }
         document
           .querySelectorAll(".nav-link")
           .forEach((l) => l.classList.remove("active"));
-        document.getElementById(id + "Section").classList.remove("d-none");
-        document
-          .querySelector('[data-section="' + id + '"]')
-          .classList.add("active");
+        var targetSection = document.getElementById(id + "Section");
+        if (targetSection) {
+          targetSection.classList.remove("d-none");
+          targetSection.style.display = "block";
+        }
+        var targetNav = document.querySelector('[data-section="' + id + '"]');
+        if (targetNav) {
+          targetNav.classList.add("active");
+        }
         if (id === "grades") {
           populateGradeSelects();
           updateGradesSummary();
@@ -1321,6 +1652,10 @@
         if (id === "groups") {
           renderGroups();
           populateGroupCourseSelect();
+        }
+        // Refresh trash section when navigating to trash
+        if (id === "trash") {
+          renderDeletedAssessments();
         }
       }
 
@@ -2345,41 +2680,87 @@
             var key = student.id + "_" + courseId;
             var grades = store.grades[key] || {};
 
-            // Get scores based on exam type
+            // Get scores based on exam type - using dynamic titles from Assessment & HPS
             var scoresText = "";
             if (examType === "written") {
               var w = grades.written || { p: 0, m: 0, pf: 0, f: 0 };
+              // Get assessment titles from Assessment & HPS
+              var writtenData = getAssessmentDataForCourse(courseId, "written");
+              var writtenAssessments = {};
+              if (
+                writtenData.assessments &&
+                writtenData.assessments.length > 0
+              ) {
+                writtenData.assessments.forEach(function (a) {
+                  writtenAssessments[a.subType] = a.title;
+                });
+              }
+              var pTitle = writtenAssessments.p || "P";
+              var mTitle = writtenAssessments.m || "M";
+              var pfTitle = writtenAssessments.pf || "PF";
+              var fTitle = writtenAssessments.f || "F";
               scoresText =
-                "P: " +
+                pTitle +
+                ": " +
                 w.p +
-                " | M: " +
+                " | " +
+                mTitle +
+                ": " +
                 w.m +
-                " | PF: " +
+                " | " +
+                pfTitle +
+                ": " +
                 w.pf +
-                " | F: " +
+                " | " +
+                fTitle +
+                ": " +
                 w.f;
             } else if (examType === "quiz") {
               var q = grades.quiz || {};
               var quizCount = grades.quizCount || 4;
+              // Get quiz titles from Assessment & HPS
+              var quizData = getAssessmentDataForCourse(courseId, "quiz");
               var scoreArr = [];
               for (var i = 1; i <= quizCount; i++) {
-                scoreArr.push("Q" + i + ": " + (q["q" + i] || 0));
+                var quizTitle =
+                  (quizData.assessments[i - 1] &&
+                    quizData.assessments[i - 1].title) ||
+                  "Q" + i;
+                scoreArr.push(quizTitle + ": " + (q["q" + i] || 0));
               }
               scoresText = scoreArr.join(" | ");
             } else if (examType === "pt") {
               var p = grades.pt || { p1: 0, p2: 0, p3: 0, p4: 0 };
-              scoresText =
-                "PT1: " +
-                p.p1 +
-                " | PT2: " +
-                p.p2 +
-                " | PT3: " +
-                p.p3 +
-                " | PT4: " +
-                p.p4;
+              // Get PT titles from Assessment & HPS
+              var ptData = getAssessmentDataForCourse(courseId, "pt");
+              var ptCount =
+                ptData.assessments.length > 0 ? ptData.assessments.length : 4;
+              var scoreArr = [];
+              for (var i = 1; i <= ptCount; i++) {
+                var ptTitle =
+                  (ptData.assessments[i - 1] &&
+                    ptData.assessments[i - 1].title) ||
+                  "PT" + i;
+                scoreArr.push(ptTitle + ": " + (p["p" + i] || 0));
+              }
+              scoresText = scoreArr.join(" | ");
             } else if (examType === "project") {
-              var proj = grades.project || { p1: 0, p2: 0 };
-              scoresText = "Proj1: " + proj.p1 + " | Proj2: " + proj.p2;
+              var proj = grades.project || {};
+              // Get Project titles from Assessment & HPS
+              var projectData = getAssessmentDataForCourse(courseId, "project");
+              var projectCount =
+                projectData.assessments.length > 0
+                  ? projectData.assessments.length
+                  : 2;
+              var scoreArr = [];
+              for (var i = 1; i <= projectCount; i++) {
+                var projectTitle =
+                  (projectData.assessments[i - 1] &&
+                    projectData.assessments[i - 1].title) ||
+                  "Proj" + i;
+                scoreArr.push(projectTitle + ": " + (proj["p" + i] || 0));
+              }
+              scoresText = scoreArr.join(" | ");
             }
 
             return (
@@ -2441,6 +2822,26 @@
           var w = grades.written || { p: 0, m: 0, pf: 0, f: 0 };
           var q = grades.quiz || {};
           var quizCount = grades.quizCount || 4;
+
+          // Get assessment data from Assessment & HPS section
+          var writtenData = getAssessmentDataForCourse(courseId, "written");
+
+          // Map written assessments to their subtypes
+          var writtenAssessments = {};
+          if (writtenData.assessments && writtenData.assessments.length > 0) {
+            writtenData.assessments.forEach(function (a) {
+              writtenAssessments[a.subType] = a;
+            });
+          }
+
+          // Default titles for written exams
+          var defaultWritten = {
+            p: { title: "Prelim", hps: 100 },
+            m: { title: "Midterm", hps: 100 },
+            pf: { title: "Pre-Final", hps: 100 },
+            f: { title: "Final", hps: 100 },
+          };
+
           var months = [
             "January",
             "February",
@@ -2456,11 +2857,19 @@
             "December",
           ];
 
-          // Build Written Exam (Major Exams) section
+          // Build Written Exam (Major Exams) section with dynamic titles from Assessment & HPS
           var html =
             '<h6 class="fw-bold mb-3">Major Exams</h6><div class="row">';
+
+          // Prelim
+          var pData = writtenAssessments.p || defaultWritten.p;
+          var pHps = writtenData.hps.p || 100;
           html +=
-            '<div class="col-md-3 mb-3"><label class="form-label">Prelim</label><select class="form-select mb-2" id="inputPrelimMonth"><option value="">Select Month</option>' +
+            '<div class="col-md-3 mb-3"><label class="form-label">' +
+            pData.title +
+            ' <small class="text-muted">(HPS: ' +
+            pHps +
+            ')</small></label><select class="form-select mb-2" id="inputPrelimMonth"><option value="">Select Month</option>' +
             months
               .map(function (m) {
                 return (
@@ -2475,13 +2884,24 @@
               })
               .join("") +
             '</select><input type="text" class="form-control mb-1" id="inputPrelimTitle" placeholder="Title" value="' +
-            (w.pTitle || "") +
+            (w.pTitle || pData.title) +
             '" /><input type="date" class="form-control mb-1" id="inputPrelimDate" value="' +
             (w.pDate || "") +
             '" /><input type="number" class="form-control" id="inputScorePrelim" value="' +
             w.p +
-            '" placeholder="Score" /></div>' +
-            '<div class="col-md-3 mb-3"><label class="form-label">Midterm</label><select class="form-select mb-2" id="inputMidtermMonth"><option value="">Select Month</option>' +
+            '" placeholder="Score (max: ' +
+            pHps +
+            ')" /></div>';
+
+          // Midterm
+          var mData = writtenAssessments.m || defaultWritten.m;
+          var mHps = writtenData.hps.m || 100;
+          html +=
+            '<div class="col-md-3 mb-3"><label class="form-label">' +
+            mData.title +
+            ' <small class="text-muted">(HPS: ' +
+            mHps +
+            ')</small></label><select class="form-select mb-2" id="inputMidtermMonth"><option value="">Select Month</option>' +
             months
               .map(function (m) {
                 return (
@@ -2496,13 +2916,24 @@
               })
               .join("") +
             '</select><input type="text" class="form-control mb-1" id="inputMidtermTitle" placeholder="Title" value="' +
-            (w.mTitle || "") +
+            (w.mTitle || mData.title) +
             '" /><input type="date" class="form-control mb-1" id="inputMidtermDate" value="' +
             (w.mDate || "") +
             '" /><input type="number" class="form-control" id="inputScoreMidterm" value="' +
             w.m +
-            '" placeholder="Score" /></div>' +
-            '<div class="col-md-3 mb-3"><label class="form-label">Pre-Final</label><select class="form-select mb-2" id="inputPrefinalMonth"><option value="">Select Month</option>' +
+            '" placeholder="Score (max: ' +
+            mHps +
+            ')" /></div>';
+
+          // Pre-Final
+          var pfData = writtenAssessments.pf || defaultWritten.pf;
+          var pfHps = writtenData.hps.pf || 100;
+          html +=
+            '<div class="col-md-3 mb-3"><label class="form-label">' +
+            pfData.title +
+            ' <small class="text-muted">(HPS: ' +
+            pfHps +
+            ')</small></label><select class="form-select mb-2" id="inputPrefinalMonth"><option value="">Select Month</option>' +
             months
               .map(function (m) {
                 return (
@@ -2517,13 +2948,24 @@
               })
               .join("") +
             '</select><input type="text" class="form-control mb-1" id="inputPrefinalTitle" placeholder="Title" value="' +
-            (w.pfTitle || "") +
+            (w.pfTitle || pfData.title) +
             '" /><input type="date" class="form-control mb-1" id="inputPrefinalDate" value="' +
             (w.pfDate || "") +
             '" /><input type="number" class="form-control" id="inputScorePreFinal" value="' +
             w.pf +
-            '" placeholder="Score" /></div>' +
-            '<div class="col-md-3 mb-3"><label class="form-label">Final</label><select class="form-select mb-2" id="inputFinalMonth"><option value="">Select Month</option>' +
+            '" placeholder="Score (max: ' +
+            pfHps +
+            ')" /></div>';
+
+          // Final
+          var fData = writtenAssessments.f || defaultWritten.f;
+          var fHps = writtenData.hps.f || 100;
+          html +=
+            '<div class="col-md-3 mb-3"><label class="form-label">' +
+            fData.title +
+            ' <small class="text-muted">(HPS: ' +
+            fHps +
+            ')</small></label><select class="form-select mb-2" id="inputFinalMonth"><option value="">Select Month</option>' +
             months
               .map(function (m) {
                 return (
@@ -2538,12 +2980,14 @@
               })
               .join("") +
             '</select><input type="text" class="form-control mb-1" id="inputFinalTitle" placeholder="Title" value="' +
-            (w.fTitle || "") +
+            (w.fTitle || fData.title) +
             '" /><input type="date" class="form-control mb-1" id="inputFinalDate" value="' +
             (w.fDate || "") +
             '" /><input type="number" class="form-control" id="inputScoreFinal" value="' +
             w.f +
-            '" placeholder="Score" /></div>';
+            '" placeholder="Score (max: ' +
+            fHps +
+            ')" /></div>';
 
           // Add Quizzes section for non-lab courses
           html +=
@@ -2570,6 +3014,12 @@
           }, 100);
         } else if (examType === "pt") {
           var p = grades.pt || { p1: 0, p2: 0, p3: 0, p4: 0 };
+
+          // Get assessment data from Assessment & HPS section
+          var ptData = getAssessmentDataForCourse(courseId, "pt");
+          var ptCount =
+            ptData.assessments.length > 0 ? ptData.assessments.length : 4;
+
           var months = [
             "January",
             "February",
@@ -2584,79 +3034,63 @@
             "November",
             "December",
           ];
-          html =
-            '<div class="row">' +
-            '<div class="col-md-3 mb-3"><label class="form-label">PT 1</label><select class="form-select mb-2" id="inputPt1Month"><option value="">Select Month</option>' +
-            months
-              .map(function (m) {
-                return (
-                  '<option value="' +
-                  m +
-                  '"' +
-                  (p.p1Month === m ? " selected" : "") +
-                  ">" +
-                  m +
-                  "</option>"
-                );
-              })
-              .join("") +
-            '</select><input type="number" class="form-control" id="inputPt1" value="' +
-            p.p1 +
-            '" placeholder="Score" /></div>' +
-            '<div class="col-md-3 mb-3"><label class="form-label">PT 2</label><select class="form-select mb-2" id="inputPt2Month"><option value="">Select Month</option>' +
-            months
-              .map(function (m) {
-                return (
-                  '<option value="' +
-                  m +
-                  '"' +
-                  (p.p2Month === m ? " selected" : "") +
-                  ">" +
-                  m +
-                  "</option>"
-                );
-              })
-              .join("") +
-            '</select><input type="number" class="form-control" id="inputPt2" value="' +
-            p.p2 +
-            '" placeholder="Score" /></div>' +
-            '<div class="col-md-3 mb-3"><label class="form-label">PT 3</label><select class="form-select mb-2" id="inputPt3Month"><option value="">Select Month</option>' +
-            months
-              .map(function (m) {
-                return (
-                  '<option value="' +
-                  m +
-                  '"' +
-                  (p.p3Month === m ? " selected" : "") +
-                  ">" +
-                  m +
-                  "</option>"
-                );
-              })
-              .join("") +
-            '</select><input type="number" class="form-control" id="inputPt3" value="' +
-            p.p3 +
-            '" placeholder="Score" /></div>' +
-            '<div class="col-md-3 mb-3"><label class="form-label">PT 4</label><select class="form-select mb-2" id="inputPt4Month"><option value="">Select Month</option>' +
-            months
-              .map(function (m) {
-                return (
-                  '<option value="' +
-                  m +
-                  '"' +
-                  (p.p4Month === m ? " selected" : "") +
-                  ">" +
-                  m +
-                  "</option>"
-                );
-              })
-              .join("") +
-            '</select><input type="number" class="form-control" id="inputPt4" value="' +
-            p.p4 +
-            '" placeholder="Score" /></div>' +
+
+          // Build PT input fields dynamically based on Assessment & HPS data
+          var html = '<div class="row">';
+          for (var ptIdx = 1; ptIdx <= ptCount; ptIdx++) {
+            var ptAssessment = ptData.assessments[ptIdx - 1] || {
+              title: "PT " + ptIdx,
+              month: "",
+              hps: 100,
+            };
+            var ptKey = "p" + ptIdx;
+            var ptScore = p[ptKey] || 0;
+            var ptMonthKey = ptKey + "Month";
+            var ptMonth = p[ptMonthKey] || "";
+            var ptHps = ptData.hps[ptKey] || 100;
+
+            html +=
+              '<div class="col-md-3 mb-3"><label class="form-label">' +
+              ptAssessment.title +
+              ' <small class="text-muted">(HPS: ' +
+              ptHps +
+              ")</small></label>" +
+              '<select class="form-select mb-2" id="inputPt' +
+              ptIdx +
+              'Month"><option value="">Select Month</option>' +
+              months
+                .map(function (m) {
+                  return (
+                    '<option value="' +
+                    m +
+                    '"' +
+                    (ptMonth === m ? " selected" : "") +
+                    ">" +
+                    m +
+                    "</option>"
+                  );
+                })
+                .join("") +
+              '</select><input type="number" class="form-control" id="inputPt' +
+              ptIdx +
+              '" value="' +
+              ptScore +
+              '" placeholder="Score (max: ' +
+              ptHps +
+              ')" /></div>';
+          }
+          html +=
             '</div><button class="btn btn-primary" onclick="saveStudentGrade()">Save Grades</button>';
         } else if (examType === "project") {
           var proj = grades.project || { p1: 0, p2: 0 };
+
+          // Get assessment data from Assessment & HPS section
+          var projectData = getAssessmentDataForCourse(courseId, "project");
+          var projectCount =
+            projectData.assessments.length > 0
+              ? projectData.assessments.length
+              : 2;
+
           var months = [
             "January",
             "February",
@@ -2671,42 +3105,52 @@
             "November",
             "December",
           ];
-          html =
-            '<div class="row">' +
-            '<div class="col-md-6 mb-3"><label class="form-label">Project 1</label><select class="form-select mb-2" id="inputProject1Month"><option value="">Select Month</option>' +
-            months
-              .map(function (m) {
-                return (
-                  '<option value="' +
-                  m +
-                  '"' +
-                  (proj.p1Month === m ? " selected" : "") +
-                  ">" +
-                  m +
-                  "</option>"
-                );
-              })
-              .join("") +
-            '</select><input type="number" class="form-control" id="inputProject1" value="' +
-            proj.p1 +
-            '" placeholder="Score" /></div>' +
-            '<div class="col-md-6 mb-3"><label class="form-label">Project 2</label><select class="form-select mb-2" id="inputProject2Month"><option value="">Select Month</option>' +
-            months
-              .map(function (m) {
-                return (
-                  '<option value="' +
-                  m +
-                  '"' +
-                  (proj.p2Month === m ? " selected" : "") +
-                  ">" +
-                  m +
-                  "</option>"
-                );
-              })
-              .join("") +
-            '</select><input type="number" class="form-control" id="inputProject2" value="' +
-            proj.p2 +
-            '" placeholder="Score" /></div>' +
+
+          // Build Project input fields dynamically based on Assessment & HPS data
+          var html = '<div class="row">';
+          for (var projIdx = 1; projIdx <= projectCount; projIdx++) {
+            var projectAssessment = projectData.assessments[projIdx - 1] || {
+              title: "Project " + projIdx,
+              month: "",
+              hps: 100,
+            };
+            var projKey = "p" + projIdx;
+            var projScore = proj[projKey] || 0;
+            var projMonthKey = projKey + "Month";
+            var projMonth = proj[projMonthKey] || "";
+            var projHps = projectData.hps[projKey] || 100;
+
+            html +=
+              '<div class="col-md-6 mb-3"><label class="form-label">' +
+              projectAssessment.title +
+              ' <small class="text-muted">(HPS: ' +
+              projHps +
+              ")</small></label>" +
+              '<select class="form-select mb-2" id="inputProject' +
+              projIdx +
+              'Month"><option value="">Select Month</option>' +
+              months
+                .map(function (m) {
+                  return (
+                    '<option value="' +
+                    m +
+                    '"' +
+                    (projMonth === m ? " selected" : "") +
+                    ">" +
+                    m +
+                    "</option>"
+                  );
+                })
+                .join("") +
+              '</select><input type="number" class="form-control" id="inputProject' +
+              projIdx +
+              '" value="' +
+              projScore +
+              '" placeholder="Score (max: ' +
+              projHps +
+              ')" /></div>';
+          }
+          html +=
             '</div><button class="btn btn-primary" onclick="saveStudentGrade()">Save Grades</button>';
         }
 
@@ -2729,6 +3173,13 @@
           parseInt(document.getElementById("inputQuizCount")?.value) ||
           4;
         var q = existingGrades || {};
+
+        // Get assessment data from Assessment & HPS section
+        var courseId = parseInt(
+          document.getElementById("gradeCourseSelect")?.value,
+        );
+        var quizData = getAssessmentDataForCourse(courseId, "quiz");
+
         var months = [
           "January",
           "February",
@@ -2746,11 +3197,20 @@
 
         var html = "";
         for (var i = 1; i <= quizCount; i++) {
+          var quizAssessment = quizData.assessments[i - 1] || {
+            title: "Quiz " + i,
+            month: "",
+            hps: 50,
+          };
+          var quizHps = quizData.hps["q" + i] || 50;
+
           html +=
             '<div class="col-md-3 mb-3">' +
-            '<label class="form-label">Quiz ' +
-            i +
-            "</label>" +
+            '<label class="form-label">' +
+            quizAssessment.title +
+            ' <small class="text-muted">(HPS: ' +
+            quizHps +
+            ")</small></label>" +
             '<select class="form-select mb-2" id="inputQuiz' +
             i +
             'Month">' +
@@ -2772,7 +3232,7 @@
             '<input type="text" class="form-control mb-1" id="inputQuiz' +
             i +
             'Title" placeholder="Title" value="' +
-            (q["q" + i + "Title"] || "") +
+            (q["q" + i + "Title"] || quizAssessment.title) +
             '" />' +
             '<input type="date" class="form-control mb-1" id="inputQuiz' +
             i +
@@ -2783,7 +3243,9 @@
             i +
             '" value="' +
             (q["q" + i] || 0) +
-            '" placeholder="Score" />' +
+            '" placeholder="Score (max: ' +
+            quizHps +
+            ')" />' +
             "</div>";
         }
         container.innerHTML = html;
@@ -2843,23 +3305,35 @@
               document.getElementById("inputQuiz" + i + "Date").value || "";
           }
         } else if (examType === "pt") {
-          grades.pt = {
-            p1: parseFloat(document.getElementById("inputPt1").value) || 0,
-            p2: parseFloat(document.getElementById("inputPt2").value) || 0,
-            p3: parseFloat(document.getElementById("inputPt3").value) || 0,
-            p4: parseFloat(document.getElementById("inputPt4").value) || 0,
-            p1Month: document.getElementById("inputPt1Month").value,
-            p2Month: document.getElementById("inputPt2Month").value,
-            p3Month: document.getElementById("inputPt3Month").value,
-            p4Month: document.getElementById("inputPt4Month").value,
-          };
+          // Get PT data from Assessment & HPS to determine how many PT fields to save
+          var ptData = getAssessmentDataForCourse(courseId, "pt");
+          var ptCount =
+            ptData.assessments.length > 0 ? ptData.assessments.length : 4;
+
+          grades.pt = {};
+          for (var i = 1; i <= ptCount; i++) {
+            grades.pt["p" + i] =
+              parseFloat(document.getElementById("inputPt" + i)?.value) || 0;
+            grades.pt["p" + i + "Month"] =
+              document.getElementById("inputPt" + i + "Month")?.value || "";
+          }
         } else if (examType === "project") {
-          grades.project = {
-            p1: parseFloat(document.getElementById("inputProject1").value) || 0,
-            p2: parseFloat(document.getElementById("inputProject2").value) || 0,
-            p1Month: document.getElementById("inputProject1Month").value,
-            p2Month: document.getElementById("inputProject2Month").value,
-          };
+          // Get Project data from Assessment & HPS to determine how many Project fields to save
+          var projectData = getAssessmentDataForCourse(courseId, "project");
+          var projectCount =
+            projectData.assessments.length > 0
+              ? projectData.assessments.length
+              : 2;
+
+          grades.project = {};
+          for (var i = 1; i <= projectCount; i++) {
+            grades.project["p" + i] =
+              parseFloat(document.getElementById("inputProject" + i)?.value) ||
+              0;
+            grades.project["p" + i + "Month"] =
+              document.getElementById("inputProject" + i + "Month")?.value ||
+              "";
+          }
         }
 
         store.grades[key] = grades;
@@ -3582,10 +4056,110 @@
 
       function deleteAssessment(i) {
         if (confirm("Delete this assessment?")) {
+          // Move to trash instead of permanent delete
+          var deletedAssessment = store.assessments[i];
+          deletedAssessment.deletedAt = new Date().toISOString(); // Track when it was deleted
+          store.deletedAssessments.push(deletedAssessment);
           store.assessments.splice(i, 1);
           save();
           renderAssessment();
+          // Show notification about trash
+          alert(
+            "Assessment moved to trash! You can restore it from the Trash section.",
+          );
         }
+      }
+
+      // Restore assessment from trash
+      function restoreAssessment(i) {
+        var assessment = store.deletedAssessments[i];
+        if (assessment) {
+          // Remove the deletedAt property before restoring
+          delete assessment.deletedAt;
+          store.assessments.push(assessment);
+          store.deletedAssessments.splice(i, 1);
+          save();
+          renderDeletedAssessments();
+          renderAssessment();
+          alert("Assessment restored successfully!");
+        }
+      }
+
+      // Permanently delete assessment from trash
+      function permanentDeleteAssessment(i) {
+        if (
+          confirm("Permanently delete this assessment? This cannot be undone!")
+        ) {
+          store.deletedAssessments.splice(i, 1);
+          save();
+          renderDeletedAssessments();
+          alert("Assessment permanently deleted!");
+        }
+      }
+
+      // Empty all items from trash
+      function emptyTrashAssessments() {
+        if (
+          confirm(
+            "Are you sure you want to permanently delete all items in trash? This cannot be undone!",
+          )
+        ) {
+          store.deletedAssessments = [];
+          save();
+          renderDeletedAssessments();
+          alert("Trash emptied successfully!");
+        }
+      }
+
+      // Render deleted assessments (trash)
+      function renderDeletedAssessments() {
+        var tbody = document.querySelector("#deletedAssessmentsTable tbody");
+        var emptyMsg = document.getElementById("deletedAssessmentsEmpty");
+
+        if (!tbody || !emptyMsg) return;
+
+        if (store.deletedAssessments.length === 0) {
+          tbody.innerHTML = "";
+          emptyMsg.classList.remove("d-none");
+          return;
+        }
+
+        emptyMsg.classList.add("d-none");
+
+        var typeLabels = {
+          written: "Written Exam",
+          quiz: "Quiz",
+          pt: "Performance Task",
+          project: "Project",
+        };
+
+        tbody.innerHTML = store.deletedAssessments
+          .map(function (a, i) {
+            var course = store.courses.find(function (c) {
+              return c.id === a.courseId;
+            });
+            var deletedDate = a.deletedAt
+              ? new Date(a.deletedAt).toLocaleDateString()
+              : "Unknown";
+            return (
+              "<tr><td>" +
+              (typeLabels[a.type] || a.type) +
+              "</td><td>" +
+              a.title +
+              "</td><td>" +
+              (course ? course.code : "N/A") +
+              "</td><td>" +
+              a.date +
+              "</td><td>" +
+              deletedDate +
+              '</td><td><button class="btn btn-sm btn-success me-1" onclick="restoreAssessment(' +
+              i +
+              ')" title="Restore"><i class="fas fa-trash-restore"></i> Restore</button><button class="btn btn-sm btn-danger" onclick="permanentDeleteAssessment(' +
+              i +
+              '" title="Permanently Delete"><i class="fas fa-times"></i></button></td></tr>'
+            );
+          })
+          .join("");
       }
 
       // Assessment & HPS Entry Functions
@@ -4203,7 +4777,313 @@
       }
 
       function save() {
-        localStorage.setItem(DB_KEY, JSON.stringify(store));
+        // Use SyncManager for saving - works offline by default
+        // SyncManager will save to localStorage first, optionally sync to Firebase if enabled
+        if (typeof SyncManager !== "undefined") {
+          SyncManager.quickSave(store);
+          // Show notification that data was saved and needs export
+          SyncManager.notifyDataChanged();
+        } else {
+          // Fallback to direct localStorage save
+          localStorage.setItem(DB_KEY, JSON.stringify(store));
+        }
+      }
+
+      // ============================================
+      // Export/Import Data Functions
+      // ============================================
+
+      // Export data as JSON file
+      function exportData() {
+        const dataStr = JSON.stringify(store, null, 2);
+        const blob = new Blob([dataStr], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `student_grade_tracker_backup_${new Date().toISOString().slice(0, 10)}.json`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        alert(
+          "Data exported successfully! You can use this file to backup or transfer data.",
+        );
+        return true;
+      }
+
+      // Export shared data for students (without admin-only data)
+      function exportSharedData() {
+        if (typeof SyncManager !== "undefined") {
+          SyncManager.exportSharedData();
+          alert(
+            "Shared data exported as 'data.json'!\n\nThis file can be uploaded to GitHub Pages so students can view their grades.\n\nInstructions:\n1. Download this file\n2. Upload it to your GitHub repository\n3. Students can then access the shared grades",
+          );
+        }
+      }
+
+      // Import data from JSON file
+      function importData(input) {
+        const file = input.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          try {
+            const importedData = JSON.parse(e.target.result);
+
+            // Validate basic structure
+            if (!importedData.courses || !importedData.students) {
+              alert(
+                "Invalid backup file format. Please select a valid backup file.",
+              );
+              return;
+            }
+
+            // Update store with imported data
+            store = importedData;
+
+            // Save to localStorage
+            localStorage.setItem(DB_KEY, JSON.stringify(store));
+
+            // Trigger notification that data was changed
+            if (typeof SyncManager !== "undefined") {
+              SyncManager.notifyDataChanged();
+            }
+
+            // Refresh the UI
+            renderDashboard();
+            renderCourses();
+            renderStudents();
+            renderEnrollment();
+            renderGradingScale();
+            populateDashboardGradeFilter();
+            renderDashboardGradeSummary();
+
+            alert("Data imported successfully!");
+          } catch (error) {
+            alert("Error importing data: " + error.message);
+          }
+        };
+        reader.readAsText(file);
+
+        // Reset the input
+        input.value = "";
+      }
+
+      // ============================================
+      // Firebase Firestore Sync Functions
+      // ============================================
+
+      // Save all data to Firebase Firestore
+      async function saveToFirebase() {
+        // Check if Firebase is available
+        if (!db || !firebase || typeof firebase.firestore !== "function") {
+          console.log("Firebase not available, skipping sync");
+          return;
+        }
+
+        try {
+          // Save each collection to Firestore
+          await saveCollectionToFirebase("courses", store.courses);
+          await saveCollectionToFirebase("students", store.students);
+          await saveCollectionToFirebase("enrollments", store.enrollments);
+          await saveCollectionToFirebase("assessments", store.assessments);
+          await saveCollectionToFirebase("groups", store.groups);
+
+          // Save grades (object with dynamic keys)
+          await saveGradesToFirebase("grades", store.grades);
+
+          // Save settings (hps, weights, gradingScale)
+          await saveSettingsToFirebase();
+
+          console.log("Data synced to Firebase successfully");
+        } catch (error) {
+          console.error("Error syncing to Firebase:", error);
+        }
+      }
+
+      // Save a collection array to Firestore
+      async function saveCollectionToFirebase(collectionName, data) {
+        // Check if Firebase is available
+        if (!db || !firebase || typeof firebase.firestore !== "function") {
+          return;
+        }
+
+        try {
+          // Delete all existing documents in the collection
+          const snapshot = await db.collection(collectionName).get();
+          const deletePromises = snapshot.docs.map((doc) => doc.ref.delete());
+          await Promise.all(deletePromises);
+
+          // Add all items from the array
+          if (data && data.length > 0) {
+            const addPromises = data.map((item) =>
+              db.collection(collectionName).add(item),
+            );
+            await Promise.all(addPromises);
+          }
+        } catch (error) {
+          console.error(`Error saving ${collectionName} to Firebase:`, error);
+        }
+      }
+
+      // Save grades to Firestore (grades is an object, not array)
+      async function saveGradesToFirebase(collectionName, data) {
+        // Check if Firebase is available
+        if (!db || !firebase || typeof firebase.firestore !== "function") {
+          return;
+        }
+
+        try {
+          // Delete all existing documents in grades collection
+          const snapshot = await db.collection(collectionName).get();
+          const deletePromises = snapshot.docs.map((doc) => doc.ref.delete());
+          await Promise.all(deletePromises);
+
+          // Add each grade entry as a document
+          if (data) {
+            const entries = Object.entries(data);
+            if (entries.length > 0) {
+              const addPromises = entries.map(([key, value]) =>
+                db.collection(collectionName).add({ id: key, ...value }),
+              );
+              await Promise.all(addPromises);
+            }
+          }
+        } catch (error) {
+          console.error(`Error saving ${collectionName} to Firebase:`, error);
+        }
+      }
+
+      // Save settings (hps, weights, gradingScale) to Firestore
+      async function saveSettingsToFirebase() {
+        try {
+          // Save hps
+          if (store.hps) {
+            await db.collection("settings").doc("hps").set(store.hps);
+          }
+
+          // Save weights
+          if (store.weights) {
+            await db.collection("settings").doc("weights").set(store.weights);
+          }
+
+          // Save gradingScale
+          if (store.gradingScale) {
+            await db.collection("settings").doc("gradingScale").set({
+              scale: store.gradingScale,
+            });
+          }
+        } catch (error) {
+          console.error("Error saving settings to Firebase:", error);
+        }
+      }
+
+      // Load all data from Firebase Firestore on startup
+      async function loadFromFirebase() {
+        // Check if Firebase is available
+        if (!db || !firebase || typeof firebase.firestore !== "function") {
+          console.log("Firebase not available, using localStorage only");
+          store = JSON.parse(localStorage.getItem(DB_KEY)) || store;
+          return false;
+        }
+
+        try {
+          console.log("Loading data from Firebase...");
+
+          // Load collections
+          store.courses = await loadCollectionFromFirebase("courses");
+          store.students = await loadCollectionFromFirebase("students");
+          store.enrollments = await loadCollectionFromFirebase("enrollments");
+          store.assessments = await loadCollectionFromFirebase("assessments");
+          store.groups = await loadCollectionFromFirebase("groups");
+          store.grades = await loadGradesFromFirebase("grades");
+
+          // Load settings
+          const hpsDoc = await db.collection("settings").doc("hps").get();
+          if (hpsDoc.exists) {
+            store.hps = hpsDoc.data();
+          }
+
+          const weightsDoc = await db
+            .collection("settings")
+            .doc("weights")
+            .get();
+          if (weightsDoc.exists) {
+            store.weights = weightsDoc.data();
+          }
+
+          const gradingScaleDoc = await db
+            .collection("settings")
+            .doc("gradingScale")
+            .get();
+          if (gradingScaleDoc.exists) {
+            store.gradingScale = gradingScaleDoc.data().scale || [];
+          }
+
+          // Save to localStorage after loading from Firebase
+          localStorage.setItem(DB_KEY, JSON.stringify(store));
+
+          console.log("Data loaded from Firebase successfully");
+          return true;
+        } catch (error) {
+          console.error("Error loading from Firebase:", error);
+          // Fall back to localStorage on error
+          console.log("Falling back to localStorage...");
+          store = JSON.parse(localStorage.getItem(DB_KEY)) || store;
+          return false;
+        }
+      }
+
+      // Load a collection array from Firestore
+      async function loadCollectionFromFirebase(collectionName) {
+        // Check if Firebase is available
+        if (!db || !firebase || typeof firebase.firestore !== "function") {
+          return [];
+        }
+
+        try {
+          const snapshot = await db.collection(collectionName).get();
+          const data = [];
+          snapshot.forEach((doc) => {
+            data.push(doc.data());
+          });
+          return data;
+        } catch (error) {
+          console.error(
+            `Error loading ${collectionName} from Firebase:`,
+            error,
+          );
+          return [];
+        }
+      }
+
+      // Load grades from Firestore (grades is an object, not array)
+      async function loadGradesFromFirebase(collectionName) {
+        // Check if Firebase is available
+        if (!db || !firebase || typeof firebase.firestore !== "function") {
+          return {};
+        }
+
+        try {
+          const snapshot = await db.collection(collectionName).get();
+          const gradesObj = {};
+          snapshot.forEach((doc) => {
+            const data = doc.data();
+            const id = data.id;
+            delete data.id;
+            gradesObj[id] = data;
+          });
+          return gradesObj;
+        } catch (error) {
+          console.error(
+            `Error loading ${collectionName} from Firebase:`,
+            error,
+          );
+          return {};
+        }
       }
 
       // Dashboard Grade Summary Functions
